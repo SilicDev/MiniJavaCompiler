@@ -6,12 +6,9 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.nio.charset.Charset;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 public class Parser {
-    private static int brackets = 0;
     private Parser() {
 
     }
@@ -39,7 +36,6 @@ public class Parser {
     private static SyntaxTreeNode parseTokens(List<Token> tokens) {
         var root = new SyntaxTreeNode(SyntaxTreeNode.Type.PROGRAM, "");
         var pos = 0;
-        brackets = 0;
         while(pos < tokens.size()) {
             pos = parseLine(tokens, pos, root);
             pos++;
@@ -80,16 +76,13 @@ public class Parser {
                 node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, tokens.get(pos).getContentAsString()));
                 pos++;
             } else if(current.getContentAsString().equals("{")){
-                //brackets++;
-                //var currentBrackets = brackets;
                 node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, tokens.get(pos++).getContentAsString()));
                 pos = parseLine(tokens, pos, node);
-                while(!(tokens.get(pos).getTokenType() == TokenType.SEPARATOR && tokens.get(pos).getContentAsString().equals("}") /*&& brackets == currentBrackets*/)) {
+                while(!(tokens.get(pos).getTokenType() == TokenType.SEPARATOR && tokens.get(pos).getContentAsString().equals("}"))) {
                     pos = parseLine(tokens, pos, node);
                     System.out.println(pos);
                 }
                 node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, tokens.get(pos++).getContentAsString()));
-                //brackets--;
             }
         } else if(current.getTokenType() == TokenType.KEYWORD) {
             if(current.getContentAsString().equals("while")) {
@@ -205,7 +198,7 @@ public class Parser {
             root.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, next.getContentAsString()));
             pos = parseStatement(tokens, pos, root);
         } else if(next.getContentAsString().equals("(")){
-            root.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.NAME, current.getContentAsString()));
+            root.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.FUNCCALL, current.getContentAsString()));
             root.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, next.getContentAsString()));
             if(!tokens.get(pos).getContentAsString().equals(")")) {
                 root.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.NAME, tokens.get(pos++).getContentAsString()));
@@ -217,8 +210,10 @@ public class Parser {
             root.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, tokens.get(pos++).getContentAsString()));
         } else {
             root.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.NAME, current.getContentAsString()));
+            // =
             root.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, next.getContentAsString()));
             pos = parseExpression(tokens, pos, root) + 1;
+            // ;
             root.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, tokens.get(pos++).getContentAsString()));
         }
         return pos;
@@ -230,13 +225,14 @@ public class Parser {
         if(current.getTokenType() == TokenType.LITERAL && !current.getContentAsString().matches("true|false")) {
             node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.NUMBER, current.getContentAsString()));
         } else if(current.getTokenType() == TokenType.IDENTIFIER) {
-            node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.NAME, current.getContentAsString()));
             if(tokens.get(pos + 1).getTokenType() == TokenType.SEPARATOR && tokens.get(pos + 1).getContentAsString().equals("(")) {
+                node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.FUNCCALL, current.getContentAsString()));
                 pos++;
                 node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, tokens.get(pos).getContentAsString()));
                 pos++;
                 node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, tokens.get(pos).getContentAsString()));
             } else {
+                node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.NAME, current.getContentAsString()));
                 current = tokens.get(pos + 1);
                 if (current.getTokenType() == TokenType.OPERATOR && current.getContentAsString().matches("[+\\-*/%&|^]")) {
                     pos += 2;
