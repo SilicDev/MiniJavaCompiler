@@ -78,9 +78,8 @@ public class Parser {
             } else if(current.getContentAsString().equals("{")){
                 node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, tokens.get(pos++).getContentAsString()));
                 pos = parseLine(tokens, pos, node);
-                while(!(tokens.get(pos).getTokenType() == TokenType.SEPARATOR && tokens.get(pos).getContentAsString().equals("}"))) {
+                while(pos < tokens.size() && !(tokens.get(pos).getTokenType() == TokenType.SEPARATOR && tokens.get(pos).getContentAsString().equals("}"))) {
                     pos = parseLine(tokens, pos, node);
-                    System.out.println(pos);
                 }
                 node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, tokens.get(pos++).getContentAsString()));
             }
@@ -269,10 +268,6 @@ public class Parser {
         }
         root.addChild(node);
         return pos;
-    }
-
-    public static void main(String[] args) {
-        Parser.parseFromFile("resources/input.java");
     }
 
     private final static List<String> types = List.of(
