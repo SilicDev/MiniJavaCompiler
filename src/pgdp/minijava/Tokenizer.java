@@ -172,7 +172,7 @@ public class Tokenizer {
         throw new IllegalStateException("Couldn't determine TokenType for string: " + text);
     }
 
-    private static final List<String> keywords = Arrays.stream(new String[] {
+    private static final List<String> keywords = List.of(
             "_",
             "abstract",
             "assert",
@@ -223,7 +223,7 @@ public class Tokenizer {
             "void",
             "volatile",
             "while"
-    }).toList();
+    );
 
     private static class State {
         boolean inComment = false;

@@ -278,7 +278,7 @@ public class Parser {
         Parser.parseFromFile("resources/input.java");
     }
 
-    private static List<String> types = Arrays.stream(new String[] {
+    private final static List<String> types = List.of(
             "int",
             "double",
             "boolean",
@@ -287,5 +287,5 @@ public class Parser {
             "short",
             "long",
             "float"
-    }).toList();
+    );
 }
