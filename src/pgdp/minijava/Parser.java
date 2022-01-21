@@ -27,7 +27,8 @@ public class Parser {
 
     public static SyntaxTreeNode parseFromString(String rawCode) {
         try {
-            ArrayList<Token> tokens = Tokenizer.tokenize(rawCode);
+            List<Token> tokens = Tokenizer.tokenize(rawCode);
+            tokens = tokens.stream().filter(token -> token.getTokenType() != TokenType.COMMENT).toList();
             return parseTokens(tokens);
         } catch (IllegalCharacterException e) {
             e.printStackTrace();
@@ -35,7 +36,7 @@ public class Parser {
         return null;
     }
 
-    private static SyntaxTreeNode parseTokens(ArrayList<Token> tokens) {
+    private static SyntaxTreeNode parseTokens(List<Token> tokens) {
         var root = new SyntaxTreeNode(SyntaxTreeNode.Type.PROGRAM, "");
         var pos = 0;
         brackets = 0;
@@ -46,7 +47,7 @@ public class Parser {
         return root;
     }
 
-    private static int parseLine(ArrayList<Token> tokens, int pos, SyntaxTreeNode root) {
+    private static int parseLine(List<Token> tokens, int pos, SyntaxTreeNode root) {
         Token current = tokens.get(pos);
         if (current.getTokenType() == TokenType.KEYWORD && types.contains(current.getContentAsString())) {
             pos = parseDeclaration(tokens, pos, root);
@@ -56,7 +57,7 @@ public class Parser {
         return pos;
     }
 
-    private static int parseDeclaration(ArrayList<Token> tokens, int pos, SyntaxTreeNode root) {
+    private static int parseDeclaration(List<Token> tokens, int pos, SyntaxTreeNode root) {
         SyntaxTreeNode node = new SyntaxTreeNode(SyntaxTreeNode.Type.DECL, "");
         node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.TYPE, tokens.get(pos++).getContentAsString()));
         node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.NAME, tokens.get(pos++).getContentAsString()));
@@ -69,7 +70,7 @@ public class Parser {
         return pos;
     }
 
-    private static int parseStatement(ArrayList<Token> tokens, int pos, SyntaxTreeNode root) {
+    private static int parseStatement(List<Token> tokens, int pos, SyntaxTreeNode root) {
         SyntaxTreeNode node = new SyntaxTreeNode(SyntaxTreeNode.Type.STMT, "");
         Token current = tokens.get(pos);
         if(current.getTokenType() == TokenType.IDENTIFIER) {
@@ -137,7 +138,7 @@ public class Parser {
         return pos;
     }
 
-    private static int parseCondition(ArrayList<Token> tokens, int pos, SyntaxTreeNode root) {
+    private static int parseCondition(List<Token> tokens, int pos, SyntaxTreeNode root) {
         var node = new SyntaxTreeNode(SyntaxTreeNode.Type.COND, "");
         Token current = tokens.get(pos++);
         if(current.getTokenType() == TokenType.LITERAL) {
@@ -196,7 +197,7 @@ public class Parser {
         return pos;
     }
 
-    private static int parseIdentifierStatement(ArrayList<Token> tokens, int pos, SyntaxTreeNode root) {
+    private static int parseIdentifierStatement(List<Token> tokens, int pos, SyntaxTreeNode root) {
         Token current = tokens.get(pos++);
         Token next = tokens.get(pos++);
         if(next.getContentAsString().equals(":")) {
@@ -223,7 +224,7 @@ public class Parser {
         return pos;
     }
 
-    private static int parseExpression(ArrayList<Token> tokens, int pos, SyntaxTreeNode root) {
+    private static int parseExpression(List<Token> tokens, int pos, SyntaxTreeNode root) {
         SyntaxTreeNode node = new SyntaxTreeNode(SyntaxTreeNode.Type.EXPR, "");
         Token current = tokens.get(pos);
         if(current.getTokenType() == TokenType.LITERAL && !current.getContentAsString().matches("true|false")) {
