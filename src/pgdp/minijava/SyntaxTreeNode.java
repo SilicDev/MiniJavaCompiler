@@ -3,6 +3,7 @@ package pgdp.minijava;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 
 public class SyntaxTreeNode implements Iterable<SyntaxTreeNode>{
     private SyntaxTreeNode[] children;
@@ -63,21 +64,43 @@ public class SyntaxTreeNode implements Iterable<SyntaxTreeNode>{
 
     private static class NodeIterator implements Iterator<SyntaxTreeNode> {
         ArrayList<NodeIterator> iterators = new ArrayList<>();
+        boolean outThis = false;
+        SyntaxTreeNode node;
 
         public NodeIterator(SyntaxTreeNode node) {
             for (int i = 0; i < node.getNumberChildren(); i++) {
                 iterators.add(new NodeIterator(node.getChild(i)));
             }
+            this.node = node;
         }
 
         @Override
         public boolean hasNext() {
+            if(!outThis) {
+                return true;
+            }
+            for (NodeIterator iterator : iterators) {
+                if(iterator.hasNext()) {
+                    return true;
+                }
+            }
             return false;
         }
 
         @Override
         public SyntaxTreeNode next() {
-            return null;
+            if(!hasNext()) {
+                throw new NoSuchElementException();
+            }
+            if(!outThis) {
+                return node;
+            }
+            for (NodeIterator iterator : iterators) {
+                if(iterator.hasNext()) {
+                    return iterator.next();
+                }
+            }
+            throw new NoSuchElementException();
         }
     }
 
@@ -93,6 +116,7 @@ public class SyntaxTreeNode implements Iterable<SyntaxTreeNode>{
         TYPE,
         STMT,
         LABEL,
-        SYMBOL
+        SYMBOL,
+        FUNCCALL
     }
 }
