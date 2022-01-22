@@ -163,7 +163,10 @@ public class Tokenizer {
             return TokenType.KEYWORD;
         }
         String start = text.substring(0, 1);
-        if(start.matches("true|false|[0-9]|\"")) {
+        if(start.matches("[0-9]|\"|'")) {
+            return TokenType.LITERAL;
+        }
+        if(text.matches("true|false")) {
             return TokenType.LITERAL;
         }
         if(text.matches("[a-zA-Z_$][a-zA-Z0-9_$-]*")) {
