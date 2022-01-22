@@ -1,11 +1,11 @@
-package pgdp.minijava;
+package pgdp.minijava.ast;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.NoSuchElementException;
+import java.util.*;
 
 public class SyntaxTreeNode implements Iterable<SyntaxTreeNode>{
+    // TODO: Replace generic class with FactoryPattern
+    //  -> move emitter logic to nodes
+
     private SyntaxTreeNode[] children;
     private final String value;
     private final Type type;
@@ -40,6 +40,23 @@ public class SyntaxTreeNode implements Iterable<SyntaxTreeNode>{
 
     public Type getType() {
         return type;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        SyntaxTreeNode that = (SyntaxTreeNode) o;
+        return Arrays.equals(children, that.children) && Objects.equals(value, that.value) && type == that.type;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(value, type);
     }
 
     @Override
