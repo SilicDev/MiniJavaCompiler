@@ -1,5 +1,6 @@
 package pgdp.minijava;
 
+import pgdp.minijava.ast.SyntaxTreeNode;
 import pgdp.minijava.exceptions.IllegalCharacterException;
 
 import java.io.BufferedReader;
@@ -33,17 +34,16 @@ public class Parser {
         return null;
     }
 
-    private static SyntaxTreeNode parseTokens(List<Token> tokens) {
+    public static SyntaxTreeNode parseTokens(List<Token> tokens) {
         var root = new SyntaxTreeNode(SyntaxTreeNode.Type.PROGRAM, "");
         var pos = 0;
         while(pos < tokens.size()) {
             pos = parseLine(tokens, pos, root);
-            pos++;
         }
         return root;
     }
 
-    private static int parseLine(List<Token> tokens, int pos, SyntaxTreeNode root) {
+    public static int parseLine(List<Token> tokens, int pos, SyntaxTreeNode root) {
         Token current = tokens.get(pos);
         if (current.getTokenType() == TokenType.KEYWORD && types.contains(current.getContentAsString())) {
             pos = parseDeclaration(tokens, pos, root);
@@ -53,30 +53,42 @@ public class Parser {
         return pos;
     }
 
-    private static int parseDeclaration(List<Token> tokens, int pos, SyntaxTreeNode root) {
+    public static int parseDeclaration(List<Token> tokens, int pos, SyntaxTreeNode root) {
         SyntaxTreeNode node = new SyntaxTreeNode(SyntaxTreeNode.Type.DECL, "");
-        node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.TYPE, tokens.get(pos++).getContentAsString()));
+        var type = new SyntaxTreeNode(SyntaxTreeNode.Type.TYPE, tokens.get(pos++).getContentAsString());
+        node.addChild(type);
         node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.NAME, tokens.get(pos++).getContentAsString()));
         while(!tokens.get(pos).getContentAsString().equals(";")) {
+            if(tokens.get(pos).getContentAsString().equals("=")) {
+                node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, tokens.get(pos++).getContentAsString()));
+                if(type.getValue().equals("boolean")) {
+                    pos = parseCondition(tokens, pos, node);
+                } else {
+                    pos = parseExpression(tokens, pos, node);
+                }
+                break;
+            }
             node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, tokens.get(pos++).getContentAsString()));
             node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.NAME, tokens.get(pos++).getContentAsString()));
+        }
+        if(!tokens.get(pos).getContentAsString().equals(";")) {
+            throw new IllegalStateException("Expected semicolon at line " + tokens.get(pos).getLine());
         }
         node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, tokens.get(pos++).getContentAsString()));
         root.addChild(node);
         return pos;
     }
 
-    private static int parseStatement(List<Token> tokens, int pos, SyntaxTreeNode root) {
+    public static int parseStatement(List<Token> tokens, int pos, SyntaxTreeNode root) {
         SyntaxTreeNode node = new SyntaxTreeNode(SyntaxTreeNode.Type.STMT, "");
-        Token current = tokens.get(pos);
+        Token current = tokens.get(pos++);
         if(current.getTokenType() == TokenType.IDENTIFIER) {
-            pos = parseIdentifierStatement(tokens, pos, node);
+            pos = parseIdentifierStatement(tokens, pos - 1, node);
         } else if(current.getTokenType() == TokenType.SEPARATOR) {
             if(current.getContentAsString().equals(";")){
-                node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, tokens.get(pos).getContentAsString()));
-                pos++;
+                node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, current.getContentAsString()));
             } else if(current.getContentAsString().equals("{")){
-                node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, tokens.get(pos++).getContentAsString()));
+                node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, current.getContentAsString()));
                 pos = parseLine(tokens, pos, node);
                 while(pos < tokens.size() && !(tokens.get(pos).getTokenType() == TokenType.SEPARATOR && tokens.get(pos).getContentAsString().equals("}"))) {
                     pos = parseLine(tokens, pos, node);
@@ -84,17 +96,35 @@ public class Parser {
                 node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, tokens.get(pos++).getContentAsString()));
             }
         } else if(current.getTokenType() == TokenType.KEYWORD) {
+            if(!allowedKeywords.contains(current.getContentAsString())) {
+                if(current.getContentAsString().equals("_")) {
+                    throw new IllegalStateException("\"_\" is not a valid identifier!");
+                }
+                if(current.getContentAsString().equals("goto")) {
+                    throw new UnsupportedOperationException("Java does not support goto operations");
+                }
+                throw new UnsupportedOperationException("Can't use Java keyword " + current.getContentAsString());
+            }
+            if(current.getContentAsString().equals("return")) {
+                node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, current.getContentAsString()));
+                current = tokens.get(pos++);
+                if(current.getContentAsString().equals(";")) {
+                    node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, current.getContentAsString()));
+                    pos++;
+                } else {
+                    throw new UnsupportedOperationException("Can't return values!");
+                }
+            }
             if(current.getContentAsString().equals("while")) {
-                pos++;
                 node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, current.getContentAsString()));
                 current = tokens.get(pos++);
                 if(current.getContentAsString().equals("(")) {
                     node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, current.getContentAsString()));
-                    pos = parseCondition(tokens, pos, node) + 1;
-                    current = tokens.get(pos++);
+                    pos = parseCondition(tokens, pos, node);
+                    current = tokens.get(pos);
                     if(current.getContentAsString().equals(")")) {
                         node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, current.getContentAsString()));
-                        pos = parseStatement(tokens, pos, node);
+                        pos = parseStatement(tokens, pos + 1, node);
                     } else {
                         throw new IllegalStateException("Couldn't close statement brackets (" +current.getLine() +")");
                     }
@@ -102,21 +132,21 @@ public class Parser {
                     throw new IllegalStateException("Couldn't open while brackets (" +current.getLine() +")");
                 }
             } else if(current.getContentAsString().equals("if")) {
-                pos++;
                 node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, current.getContentAsString()));
                 current = tokens.get(pos++);
                 if(current.getContentAsString().equals("(")) {
                     node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, current.getContentAsString()));
-                    pos = parseCondition(tokens, pos, node) + 1;
+                    pos = parseCondition(tokens, pos, node);
                     current = tokens.get(pos++);
                     if(current.getContentAsString().equals(")")) {
                         node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, current.getContentAsString()));
                         pos = parseStatement(tokens, pos, node);
-                        current = tokens.get(pos);
-                        if(current.getContentAsString().equals("else")) {
-                            pos++;
-                            node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, current.getContentAsString()));
-                            pos = parseStatement(tokens, pos, node);
+                        if(pos < tokens.size()) {
+                            current = tokens.get(pos);
+                            if (current.getContentAsString().equals("else")) {
+                                node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, current.getContentAsString()));
+                                pos = parseStatement(tokens, pos + 1, node);
+                            }
                         }
                     } else {
                         throw new IllegalStateException("Couldn't close statement brackets (" +current.getLine() +")");
@@ -130,16 +160,21 @@ public class Parser {
         return pos;
     }
 
-    private static int parseCondition(List<Token> tokens, int pos, SyntaxTreeNode root) {
+    public static int parseCondition(List<Token> tokens, int pos, SyntaxTreeNode root) {
         var node = new SyntaxTreeNode(SyntaxTreeNode.Type.COND, "");
         Token current = tokens.get(pos++);
-        if(current.getTokenType() == TokenType.LITERAL) {
+        if(current.getTokenType() == TokenType.OPERATOR) {
+            if(current.getContentAsString().equals("!")) {
+                node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, current.getContentAsString()));
+            }
+            pos = parseCondition(tokens, pos, node);
+        }else if(current.getTokenType() == TokenType.LITERAL) {
             if(current.getContentAsString().equals("true")) {
                 node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.BOOL, current.getContentAsString()));
             } else if(current.getContentAsString().equals("false")) {
                 node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.BOOL, current.getContentAsString()));
             } else {
-                pos = parseExpression(tokens, pos - 1, node) + 1;
+                pos = parseExpression(tokens, pos - 1, node);
                 current = tokens.get(pos++);
                 if(current.getTokenType() == TokenType.OPERATOR && current.getContentAsString().matches("==|!=|>|<|<=|>=")) {
                     node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.COMP, current.getContentAsString()));
@@ -159,37 +194,38 @@ public class Parser {
             } else {
                 throw new IllegalStateException("Couldn't open condition brackets (" +current.getLine() +")");
             }
+        } else if(current.getTokenType() == TokenType.IDENTIFIER &&
+                (tokens.get(pos).getContentAsString().equals(")") || tokens.get(pos).getContentAsString().matches("&&|&|\\|\\||\\|\\^"))){
+            pos = parseExpression(tokens, pos - 1, node);
+        } else if(current.getTokenType() == TokenType.IDENTIFIER) {
+            pos = parseExpression(tokens, pos - 1, node);
+            current = tokens.get(pos++);
+            if (current.getTokenType() == TokenType.OPERATOR && current.getContentAsString().matches("==|!=|<|>|<=|>=")) {
+                node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.COMP, current.getContentAsString()));
+                pos = parseExpression(tokens, pos, node);
+            }
         } else {
-            var oldPos = pos;
-            try {
-                pos = parseExpression(tokens, pos - 1, node);
+            throw new IllegalStateException("Unexpected symbol " + current.getContentAsString() + "at line " + current.getLine());
+        }
+        if(pos < tokens.size()) {
+            Token next = tokens.get(pos);
+            if (next.getTokenType() == TokenType.OPERATOR && next.getContentAsString().matches("&&|&|\\|\\||\\|\\^")) {
+                var temp = new SyntaxTreeNode(SyntaxTreeNode.Type.COND, "");
+                for (int i = 0; i < node.getNumberChildren(); i++) {
+                    temp.addChild(node.getChild(i));
+                }
+                node = new SyntaxTreeNode(SyntaxTreeNode.Type.COND, "");
+                node.addChild(temp);
+                node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, next.getContentAsString()));
                 pos++;
-                current = tokens.get(pos++);
-                if (current.getTokenType() == TokenType.OPERATOR && current.getContentAsString().matches("==|!=|<|>|<=|>=")) {
-                    node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.COMP, current.getContentAsString()));
-                    pos = parseExpression(tokens, pos, node);
-                } else {
-                    pos = oldPos;
-                    pos = parseCondition(tokens, pos, node);
-                    if (current.getTokenType() == TokenType.OPERATOR && current.getContentAsString().matches("&&|&|\\|\\||\\|\\^")) {
-                        node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, current.getContentAsString()));
-                        pos = parseCondition(tokens, pos, node);
-                    }
-                }
-            }catch (IllegalStateException e) {
-                pos = oldPos;
                 pos = parseCondition(tokens, pos, node);
-                if (current.getTokenType() == TokenType.OPERATOR && current.getContentAsString().matches("&&|&|\\|\\||\\|\\^")) {
-                    node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, current.getContentAsString()));
-                    pos = parseCondition(tokens, pos, node);
-                }
             }
         }
         root.addChild(node);
         return pos;
     }
 
-    private static int parseIdentifierStatement(List<Token> tokens, int pos, SyntaxTreeNode root) {
+    public static int parseIdentifierStatement(List<Token> tokens, int pos, SyntaxTreeNode root) {
         Token current = tokens.get(pos++);
         Token next = tokens.get(pos++);
         if(next.getContentAsString().equals(":")) {
@@ -201,58 +237,62 @@ public class Parser {
             temp.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.NAME, current.getContentAsString()));
             temp.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, next.getContentAsString()));
             if(!tokens.get(pos).getContentAsString().equals(")")) {
-                pos = parseExpression(tokens, pos, temp) + 1;
+                pos = parseExpression(tokens, pos, temp);
                 while (!tokens.get(pos).getContentAsString().equals(")")) {
-                    pos = parseExpression(tokens, pos, temp) + 1;
+                    pos = parseExpression(tokens, pos + 1, temp);
                     temp.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.NAME, tokens.get(pos++).getContentAsString()));
                 }
             }
             temp.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, tokens.get(pos++).getContentAsString()));
+            temp.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, tokens.get(pos++).getContentAsString()));
             root.addChild(temp);
-        } else {
+        } else if(next.getContentAsString().equals("=")) {
             var temp = new SyntaxTreeNode(SyntaxTreeNode.Type.ASS, "");
             temp.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.NAME, current.getContentAsString()));
             // =
             temp.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, next.getContentAsString()));
-            pos = parseExpression(tokens, pos, temp) + 1;
+            pos = parseExpression(tokens, pos, temp);
             // ;
             temp.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, tokens.get(pos++).getContentAsString()));
             root.addChild(temp);
+        } else {
+            throw new IllegalStateException("Not a statement (" + current.getLine() + ")");
         }
         return pos;
     }
 
-    private static int parseExpression(List<Token> tokens, int pos, SyntaxTreeNode root) {
+    public static int parseExpression(List<Token> tokens, int pos, SyntaxTreeNode root) {
         SyntaxTreeNode node = new SyntaxTreeNode(SyntaxTreeNode.Type.EXPR, "");
-        Token current = tokens.get(pos);
-        if(current.getTokenType() == TokenType.LITERAL && !current.getContentAsString().matches("true|false")) {
-            Token next = tokens.get(pos + 1);
-            if (next.getTokenType() == TokenType.OPERATOR && next.getContentAsString().matches("[+\\-*/%&|^]")) {
-                var temp = new SyntaxTreeNode(SyntaxTreeNode.Type.EXPR, "");
-                temp.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.NUMBER, current.getContentAsString()));
-                node.addChild(temp);
-                pos += 2;
-                node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, next.getContentAsString()));
-                pos = parseExpression(tokens, pos, node);
+        Token current = tokens.get(pos++);
+        Token next = tokens.get(pos);
+        if(current.getTokenType() == TokenType.LITERAL) {
+            if(!current.getContentAsString().matches("true|false")) {
+                if (next.getTokenType() == TokenType.OPERATOR && next.getContentAsString().matches("[+\\-*/%&|^]")) {
+                    var temp = new SyntaxTreeNode(SyntaxTreeNode.Type.EXPR, "");
+                    temp.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.NUMBER, current.getContentAsString()));
+                    node.addChild(temp);
+                    node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, next.getContentAsString()));
+                    pos++;
+                    pos = parseExpression(tokens, pos, node);
+                } else {
+                    node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.NUMBER, current.getContentAsString()));
+                }
             } else {
-                node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.NUMBER, current.getContentAsString()));
+                pos = parseCondition(tokens, pos - 1, node);
             }
         } else if(current.getTokenType() == TokenType.IDENTIFIER) {
-            if(tokens.get(pos + 1).getTokenType() == TokenType.SEPARATOR && tokens.get(pos + 1).getContentAsString().equals("(")) {
+            if(tokens.get(pos).getTokenType() == TokenType.SEPARATOR && tokens.get(pos).getContentAsString().equals("(")) {
                 var temp = new SyntaxTreeNode(SyntaxTreeNode.Type.FUNCCALL, "");
                 temp.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.NAME, current.getContentAsString()));
-                pos++;
-                temp.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, tokens.get(pos).getContentAsString()));
-                pos++;
-                temp.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, tokens.get(pos).getContentAsString()));
+                temp.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, tokens.get(pos++).getContentAsString()));
+                temp.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, tokens.get(pos++).getContentAsString()));
                 node.addChild(temp);
             } else {
-                Token next = tokens.get(pos + 1);
                 if (next.getTokenType() == TokenType.OPERATOR && next.getContentAsString().matches("[+\\-*/%&|^]")) {
                     var temp = new SyntaxTreeNode(SyntaxTreeNode.Type.EXPR, "");
                     temp.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.NAME, current.getContentAsString()));
                     node.addChild(temp);
-                    pos += 2;
+                    pos++;
                     node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, next.getContentAsString()));
                     pos = parseExpression(tokens, pos, node);
                 } else {
@@ -261,8 +301,8 @@ public class Parser {
             }
         } else if(current.getTokenType() == TokenType.SEPARATOR && current.getContentAsString().equals("(")) {
             node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, current.getContentAsString()));
-            pos = parseExpression(tokens, pos + 1, node);
-            current = tokens.get(pos + 1);
+            pos = parseExpression(tokens, pos, node);
+            current = tokens.get(pos++);
             if(current.getTokenType() == TokenType.SEPARATOR && current.getContentAsString().equals(")")) {
                 node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, current.getContentAsString()));
             } else {
@@ -270,20 +310,16 @@ public class Parser {
             }
         } else if(current.getTokenType() == TokenType.OPERATOR && current.getContentAsString().equals("-")) {
             node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, current.getContentAsString()));
-            pos++;
             pos = parseExpression(tokens, pos, node);
         } else {
-            pos = parseExpression(tokens, pos + 1, node);
-            pos++;
+            pos = parseExpression(tokens, pos, node);
             current = tokens.get(pos++);
             if(current.getTokenType() == TokenType.OPERATOR && current.getContentAsString().matches("[+\\-*/%&|^]")) {
                 node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, current.getContentAsString()));
                 pos = parseExpression(tokens, pos, node);
-            } else if(tokens.get(pos + 1).getTokenType() == TokenType.SEPARATOR && tokens.get(pos + 1).getContentAsString().equals("(")) {
-                pos++;
-                node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, tokens.get(pos).getContentAsString()));
-                pos++;
-                node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, tokens.get(pos).getContentAsString()));
+            } else if(tokens.get(pos).getTokenType() == TokenType.SEPARATOR && tokens.get(pos).getContentAsString().equals("(")) {
+                node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, tokens.get(pos++).getContentAsString()));
+                node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, tokens.get(pos++).getContentAsString()));
             }
         }
         root.addChild(node);
@@ -299,5 +335,15 @@ public class Parser {
             "short",
             "long",
             "float"
+    );
+
+    private static final List<String> allowedKeywords = List.of(
+            "boolean",
+            "else",
+            "for",
+            "if",
+            "int",
+            "return",
+            "while"
     );
 }
