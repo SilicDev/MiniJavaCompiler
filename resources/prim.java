@@ -14,4 +14,4 @@ while(divisor * divisor <= number && prim) {
 if(number <= 1) {
     prim = false;
 }
-writeInt(number);
+write(prim);
