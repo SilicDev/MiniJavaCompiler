@@ -117,6 +117,7 @@ public class SyntaxTreeNode implements Iterable<SyntaxTreeNode>{
         STMT,
         LABEL,
         SYMBOL,
-        FUNCCALL
+        FUNCCALL,
+        ASS
     }
 }

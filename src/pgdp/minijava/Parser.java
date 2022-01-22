@@ -197,23 +197,27 @@ public class Parser {
             root.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, next.getContentAsString()));
             pos = parseStatement(tokens, pos, root);
         } else if(next.getContentAsString().equals("(")){
-            root.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.FUNCCALL, current.getContentAsString()));
-            root.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, next.getContentAsString()));
+            var temp = new SyntaxTreeNode(SyntaxTreeNode.Type.FUNCCALL, "");
+            temp.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.NAME, current.getContentAsString()));
+            temp.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, next.getContentAsString()));
             if(!tokens.get(pos).getContentAsString().equals(")")) {
-                root.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.NAME, tokens.get(pos++).getContentAsString()));
+                pos = parseExpression(tokens, pos, temp) + 1;
                 while (!tokens.get(pos).getContentAsString().equals(")")) {
-                    pos = parseExpression(tokens, pos, root) + 1;
-                    root.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.NAME, tokens.get(pos++).getContentAsString()));
+                    pos = parseExpression(tokens, pos, temp) + 1;
+                    temp.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.NAME, tokens.get(pos++).getContentAsString()));
                 }
             }
-            root.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, tokens.get(pos++).getContentAsString()));
+            temp.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, tokens.get(pos++).getContentAsString()));
+            root.addChild(temp);
         } else {
-            root.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.NAME, current.getContentAsString()));
+            var temp = new SyntaxTreeNode(SyntaxTreeNode.Type.ASS, "");
+            temp.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.NAME, current.getContentAsString()));
             // =
-            root.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, next.getContentAsString()));
-            pos = parseExpression(tokens, pos, root) + 1;
+            temp.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, next.getContentAsString()));
+            pos = parseExpression(tokens, pos, temp) + 1;
             // ;
-            root.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, tokens.get(pos++).getContentAsString()));
+            temp.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, tokens.get(pos++).getContentAsString()));
+            root.addChild(temp);
         }
         return pos;
     }
@@ -222,21 +226,37 @@ public class Parser {
         SyntaxTreeNode node = new SyntaxTreeNode(SyntaxTreeNode.Type.EXPR, "");
         Token current = tokens.get(pos);
         if(current.getTokenType() == TokenType.LITERAL && !current.getContentAsString().matches("true|false")) {
-            node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.NUMBER, current.getContentAsString()));
+            Token next = tokens.get(pos + 1);
+            if (next.getTokenType() == TokenType.OPERATOR && next.getContentAsString().matches("[+\\-*/%&|^]")) {
+                var temp = new SyntaxTreeNode(SyntaxTreeNode.Type.EXPR, "");
+                temp.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.NUMBER, current.getContentAsString()));
+                node.addChild(temp);
+                pos += 2;
+                node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, next.getContentAsString()));
+                pos = parseExpression(tokens, pos, node);
+            } else {
+                node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.NUMBER, current.getContentAsString()));
+            }
         } else if(current.getTokenType() == TokenType.IDENTIFIER) {
             if(tokens.get(pos + 1).getTokenType() == TokenType.SEPARATOR && tokens.get(pos + 1).getContentAsString().equals("(")) {
-                node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.FUNCCALL, current.getContentAsString()));
+                var temp = new SyntaxTreeNode(SyntaxTreeNode.Type.FUNCCALL, "");
+                temp.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.NAME, current.getContentAsString()));
                 pos++;
-                node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, tokens.get(pos).getContentAsString()));
+                temp.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, tokens.get(pos).getContentAsString()));
                 pos++;
-                node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, tokens.get(pos).getContentAsString()));
+                temp.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, tokens.get(pos).getContentAsString()));
+                node.addChild(temp);
             } else {
-                node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.NAME, current.getContentAsString()));
-                current = tokens.get(pos + 1);
-                if (current.getTokenType() == TokenType.OPERATOR && current.getContentAsString().matches("[+\\-*/%&|^]")) {
+                Token next = tokens.get(pos + 1);
+                if (next.getTokenType() == TokenType.OPERATOR && next.getContentAsString().matches("[+\\-*/%&|^]")) {
+                    var temp = new SyntaxTreeNode(SyntaxTreeNode.Type.EXPR, "");
+                    temp.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.NAME, current.getContentAsString()));
+                    node.addChild(temp);
                     pos += 2;
-                    node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, current.getContentAsString()));
+                    node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, next.getContentAsString()));
                     pos = parseExpression(tokens, pos, node);
+                } else {
+                    node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.NAME, current.getContentAsString()));
                 }
             }
         } else if(current.getTokenType() == TokenType.SEPARATOR && current.getContentAsString().equals("(")) {
