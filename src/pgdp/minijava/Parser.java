@@ -309,8 +309,13 @@ public class Parser {
                 throw new IllegalStateException("Couldn't close expression brackets (" +current.getLine() +")");
             }
         } else if(current.getTokenType() == TokenType.OPERATOR && current.getContentAsString().equals("-")) {
-            node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, current.getContentAsString()));
-            pos = parseExpression(tokens, pos, node);
+            if(tokens.get(pos).getTokenType() == TokenType.LITERAL) {
+                node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.NUMBER, current.getContentAsString() + tokens.get(pos).getContentAsString()));
+                pos++;
+            } else {
+                node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, current.getContentAsString()));
+                pos = parseExpression(tokens, pos, node);
+            }
         } else {
             pos = parseExpression(tokens, pos, node);
             current = tokens.get(pos++);
