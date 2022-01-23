@@ -28,7 +28,7 @@ public class Emitter {
     }
 
     private static String cleanUpResult(String in) {
-        List<String> lines = in.lines().toList();
+        ArrayList<String> lines = new ArrayList<>(in.lines().toList());
         ArrayList<String> newLines = new ArrayList<>();
         if(lines.size() != 0) {
             newLines.add(lines.get(0));
@@ -39,6 +39,17 @@ public class Emitter {
             if(current.startsWith("ALLOC") && prev.startsWith("ALLOC")) {
                 newLines.remove(prev);
                 newLines.add("ALLOC " + (Integer.parseInt(current.substring(6)) + Integer.parseInt(prev.substring(6))));
+            }else if(current.endsWith(":") && prev.endsWith(":")){
+                String prevLabel = prev.substring(0, prev.length() - 1);
+                String currentLabel = current.substring(0, current.length() - 1);
+                for (int j = 0; j < lines.size(); j++) {
+                    lines.set(j, lines.get(j).replace(prevLabel, currentLabel));
+                }
+                newLines.remove(prev);
+                for (int j = 0; j < newLines.size(); j++) {
+                    newLines.set(j, newLines.get(j).replace(prevLabel, currentLabel));
+                }
+                newLines.add(current);
             } else {
                 newLines.add(current);
             }
