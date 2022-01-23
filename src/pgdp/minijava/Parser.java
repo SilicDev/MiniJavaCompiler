@@ -252,9 +252,9 @@ public class Parser {
             // =
             temp.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, next.getContentAsString()));
             pos = parseExpression(tokens, pos, temp);
-            // ;
-            temp.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, tokens.get(pos++).getContentAsString()));
             root.addChild(temp);
+            // ;
+            root.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, tokens.get(pos++).getContentAsString()));
         } else {
             throw new IllegalStateException("Not a statement (" + current.getLine() + ")");
         }

@@ -363,8 +363,8 @@ class ParserTest {
         var temp3 = new SyntaxTreeNode(SyntaxTreeNode.Type.EXPR, "");
         temp3.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.NUMBER, "0"));
         temp2.addChild(temp3);
-        temp2.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, ";"));
         temp.addChild(temp2);
+        temp.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, ";"));
         expectedTree.addChild(temp);
         assertEquals(expectedTree, tree);
         assertEquals(4, pos);
@@ -384,8 +384,8 @@ class ParserTest {
         temp4.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.BOOL, "true"));
         temp3.addChild(temp4);
         temp2.addChild(temp3);
-        temp2.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, ";"));
         temp.addChild(temp2);
+        temp.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, ";"));
         expectedTree.addChild(temp);
         assertEquals(expectedTree, tree);
         assertEquals(4, pos);
@@ -407,8 +407,8 @@ class ParserTest {
         temp4.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, ")"));
         temp3.addChild(temp4);
         temp2.addChild(temp3);
-        temp2.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, ";"));
         temp.addChild(temp2);
+        temp.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, ";"));
         expectedTree.addChild(temp);
         assertEquals(expectedTree, tree);
         assertEquals(6, pos);
