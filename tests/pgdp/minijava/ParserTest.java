@@ -427,8 +427,8 @@ class ParserTest {
         temp3.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.NAME, "i"));
         temp2.addChild(temp3);
         temp2.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, ")"));
-        temp2.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, ";"));
         temp.addChild(temp2);
+        temp.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, ";"));
         expectedTree.addChild(temp);
         assertEquals(expectedTree, tree);
         assertEquals(5, pos);

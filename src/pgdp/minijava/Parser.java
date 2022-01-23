@@ -244,8 +244,8 @@ public class Parser {
                 }
             }
             temp.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, tokens.get(pos++).getContentAsString()));
-            temp.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, tokens.get(pos++).getContentAsString()));
             root.addChild(temp);
+            root.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, tokens.get(pos++).getContentAsString()));
         } else if(next.getContentAsString().equals("=")) {
             var temp = new SyntaxTreeNode(SyntaxTreeNode.Type.ASS, "");
             temp.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.NAME, current.getContentAsString()));
@@ -285,6 +285,13 @@ public class Parser {
                 var temp = new SyntaxTreeNode(SyntaxTreeNode.Type.FUNCCALL, "");
                 temp.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.NAME, current.getContentAsString()));
                 temp.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, tokens.get(pos++).getContentAsString()));
+                if(!tokens.get(pos).getContentAsString().equals(")")) {
+                    pos = parseExpression(tokens, pos, temp);
+                    while (!tokens.get(pos).getContentAsString().equals(")")) {
+                        pos = parseExpression(tokens, pos + 1, temp);
+                        temp.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.NAME, tokens.get(pos++).getContentAsString()));
+                    }
+                }
                 temp.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, tokens.get(pos++).getContentAsString()));
                 node.addChild(temp);
             } else {
@@ -309,7 +316,7 @@ public class Parser {
                 throw new IllegalStateException("Couldn't close expression brackets (" +current.getLine() +")");
             }
         } else if(current.getTokenType() == TokenType.OPERATOR && current.getContentAsString().equals("-")) {
-            if(tokens.get(pos).getTokenType() == TokenType.LITERAL) {
+            if(tokens.get(pos).getTokenType() == TokenType.LITERAL && !tokens.get(pos).getContentAsString().matches("true|false")) {
                 node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.NUMBER, current.getContentAsString() + tokens.get(pos).getContentAsString()));
                 pos++;
             } else {
@@ -318,10 +325,16 @@ public class Parser {
             }
         } else {
             pos = parseExpression(tokens, pos, node);
+            if(node.getChild(node.getNumberChildren() - 1).getType() == SyntaxTreeNode.Type.COND) {
+                throw new IllegalStateException();
+            }
             current = tokens.get(pos++);
             if(current.getTokenType() == TokenType.OPERATOR && current.getContentAsString().matches("[+\\-*/%&|^]")) {
                 node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, current.getContentAsString()));
                 pos = parseExpression(tokens, pos, node);
+                if(node.getChild(node.getNumberChildren() - 1).getType() == SyntaxTreeNode.Type.COND) {
+                    throw new IllegalStateException();
+                }
             } else if(tokens.get(pos).getTokenType() == TokenType.SEPARATOR && tokens.get(pos).getContentAsString().equals("(")) {
                 node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, tokens.get(pos++).getContentAsString()));
                 node.addChild(new SyntaxTreeNode(SyntaxTreeNode.Type.SYMBOL, tokens.get(pos++).getContentAsString()));
