@@ -9,11 +9,11 @@ Mind that I only have a basic understanding of compilers.
 # How does it work?
 
 The compiler consists of three major components:
-1. [The Tokenizer](#the-tokenizer-custom-id) : Converts the miniJava code into tokens for the parser.
-2. [The Parser](#the-parser-custom-id) : Converts the tokens into an Abstract Syntax Tree (AST)
-3. [The Emitter](#the-emitter-custom-id) : Converts the AST into executable miniJVM code
+1. [The Tokenizer](#the-tokenizer) : Converts the miniJava code into tokens for the parser.
+2. [The Parser](#the-parser) : Converts the tokens into an Abstract Syntax Tree (AST)
+3. [The Emitter](#the-emitter) : Converts the AST into executable miniJVM code
 
-## The Tokenizer {#custom-id}
+## The Tokenizer
 The tokenizer splits the raw miniJava code into tokens of different types.
 Tokens are the smallest unit of code in the text and are basically just like
 words in natural languages. The tokenizer is comparatively stupid, as all it
@@ -40,7 +40,7 @@ This is mostly done to lock the user from using these names as identifiers.
 
 The tokens are then passed to the parser.
 
-## The Parser {#custom-id}
+## The Parser
 The parser iterates over the received tokens and builds an Abstract Syntax Tree 
 (AST) from them. The AST is a direct representation of the control flow of the 
 program. The nodes of the AST are of different types signifying different kinds 
@@ -142,9 +142,9 @@ SYMBOL
 - Default for tokens whose type isn't relevant to the AST.
 - Holds the text of the symbol.
 
-The AST ist then passed to the emitter.
+The AST is then passed to the emitter.
 
-## The Emitter {#custom-id}
+## The Emitter
 
 The emitter tries to compile the Abstract Syntax Tree received from the parser to miniJVM code.
 
