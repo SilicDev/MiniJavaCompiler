@@ -262,6 +262,8 @@ Only the parser and tokenizer are able to return line numbers when throwing
 exceptions, however, adding a line variable to the SyntaxTreeNodes solves this 
 if needed.
 
+Currently the parser does not ensure the types of the variables.
+
 ---
 # Observations
 
