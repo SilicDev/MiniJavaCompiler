@@ -153,7 +153,7 @@ As such the AST for this max() function:
 ```
 int i, j;
 i = readInt();
-i = readInt();
+j = readInt();
 if(i < j) {
     write(j);
 } else {
